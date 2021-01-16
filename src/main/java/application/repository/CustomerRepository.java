@@ -1,18 +1,15 @@
 package application.repository;
 
-import application.model.Customer;
+import java.util.List;
+
 import com.cloudant.client.api.Database;
 import com.cloudant.client.api.query.QueryResult;
 
-import java.util.List;
+import application.model.Customer;
 
-/**
- * Class is responsible for handling queries requests
- *
- * @author Oscar.Ricaud@ibm.com
- */
 public class CustomerRepository {
-    public List<Customer> getCustomers(Database database) {
+	
+	public List<Customer> getCustomers(Database database) {
         String query = "{" +
                 "   \"selector\": {" +
                 "      \"_id\": {" +
@@ -40,4 +37,5 @@ public class CustomerRepository {
         System.out.println("customers.toString" + customers.getDocs().toString());
         return customers.getDocs().toString();
     }
+
 }

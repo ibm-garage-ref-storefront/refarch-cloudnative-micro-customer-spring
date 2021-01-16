@@ -1,24 +1,22 @@
 package application.controller;
 
-import application.model.About;
-import application.repository.AboutService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Class is responsible for handling rest end points
- */
+import application.model.About;
+import application.repository.AboutService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
 @RestController
 @RequestMapping("/")
 @Api(value = "About Customer service")
 public class AboutController {
-
-    @Autowired
+	
+	@Autowired
     AboutService aboutService;
 
     /**
