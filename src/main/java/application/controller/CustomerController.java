@@ -3,6 +3,7 @@ package application.controller;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -112,6 +117,7 @@ public class CustomerController {
 	/**
      * @return customer by username
      */
+	@CrossOrigin
     @ApiOperation(value = "Search a customer by id", response = Customer.class)
     @RequestMapping(value = "/{id}", method = RequestMethod.GET)
     protected @ResponseBody
@@ -135,6 +141,7 @@ public class CustomerController {
 	/**
      * @return customer by username
      */
+	@CrossOrigin
     @RequestMapping(value = "/search", method = RequestMethod.GET)
     protected @ResponseBody ResponseEntity<?> searchCustomers(@RequestHeader Map<String, String> headers, @RequestParam(required=true) String username) {
         try {
@@ -148,10 +155,6 @@ public class CustomerController {
             final QueryResult<Customer> customers = getCloudantDatabase().query(query, Customer.class);
             System.out.println("customers.toString" + customers.getDocs().toString());
             List<Customer> customer_list = customers.getDocs();
-        	
-//        	final List<Customer> customers = getCloudantDatabase().findByIndex(
-//        			"{ \"selector\": { \"username\": \"" + username + "\" } }", 
-//        			Customer.class);
         	
         	//  query index
             return  ResponseEntity.ok(customer_list);
@@ -179,9 +182,7 @@ public class CustomerController {
             if (payload.get_id() != null && cloudant.contains(payload.get_id())) {
                 return ResponseEntity.badRequest().body("Id " + payload.get_id() + " already exists");
             }
-
-//            String customer = customerRepository.getCustomerByUsername(cloudantProperties.getCloudantDatabase(), payload.getUsername()).toString();
-            
+         
             String query = "{ \"selector\": { \"username\": \"" + payload.getUsername() + "\" } }";
             System.out.println("username " + payload.getUsername());
             final QueryResult<Customer> customers = getCloudantDatabase().query(query, Customer.class);
@@ -286,28 +287,49 @@ public class CustomerController {
      * @throws Exception
      */
 
-    @ApiOperation(value = "View a list of available customers", response = Iterable.class)
+    @ApiOperation(value = "View a customer", response = Iterable.class)
     @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "Successfully retrieved list"),
+            @ApiResponse(code = 200, message = "Successfully retrieved"),
             @ApiResponse(code = 401, message = "You are not authorized to view the resource"),
             @ApiResponse(code = 403, message = "Accessing the resource you were trying to reach is forbidden"),
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     }
     )
-    @RequestMapping(value = "/list", method = RequestMethod.GET)
-    protected ResponseEntity<?> getAllCustomers() {
-    	String query = "{" +
-                "   \"selector\": {" +
-                "      \"_id\": {" +
-                "         \"$gt\": null" +
-                "      }" +
-                "   }" +
-                "}";
-        final QueryResult<Customer> customers = getCloudantDatabase().query(query, Customer.class);
-        System.out.println("customers " + customers.getDocs());
-        List<Customer> customer_list = customers.getDocs();
-        
-        return ResponseEntity.ok(customer_list);
+    @RequestMapping(method = RequestMethod.GET)
+    protected ResponseEntity<?> getCustomer() {
+    	try {
+    		final String customerId = getCustomerId();
+    		if (customerId == null) {
+        		// if no user passed in, this is a bad request
+        		return ResponseEntity.badRequest().body("Invalid Bearer Token: Missing customer ID");
+        	}
+    		logger.debug("caller: " + customerId);
+    		String query = "{ \"selector\": { \"username\": \"" + customerId + "\" } }";
+            System.out.println("username " + customerId);
+            final QueryResult<Customer> customers = getCloudantDatabase().query(query, Customer.class);
+            System.out.println("customers.toString" + customers.getDocs().toString());
+    		return ResponseEntity.ok(Arrays.asList(customers.getDocs()));
+    	}catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            throw e;
+        }
+    }
+    
+    private String getCustomerId() {
+    	final SecurityContext ctx = SecurityContextHolder.getContext();
+    	if (ctx.getAuthentication() == null) {
+    		return null;
+    	};
+    	
+    	if (!ctx.getAuthentication().isAuthenticated()) {
+    		return null;
+    	}
+    	
+    	final OAuth2Authentication oauth = (OAuth2Authentication)ctx.getAuthentication();
+    	
+    	logger.debug("CustomerID: " + oauth.getName());
+    	
+    	return oauth.getName();
     }
 
 
